@@ -71,4 +71,36 @@ class CHoming
     void calculate_homeoffset();
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CMoveHome
+{
+    public:
+	CMoveHome(int jdof);
+	virtual ~CMoveHome();
+
+    void read(double time, double joint_position[], double home_offset_position[], int home_sensor[]);
+    void move_touchsensor_position();
+    void write(double desired_velocity[]);
+
+    private:
+    bool _init_time_bool;
+    bool _operation_bool;
+    bool _print_start_bool;
+    double _start_t;
+    double _init_t;
+    double _wait_t;
+    double _motion_t;    
+    double _t;
+    int _joint_num;
+
+    VectorCXd _q;
+    VectorCXd _q_init;
+    VectorCXd _q_offset;
+    VectorCXi _home_sensor;
+    VectorCXd _qdot_des;
+};
+
 #endif

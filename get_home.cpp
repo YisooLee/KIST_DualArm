@@ -7,6 +7,7 @@ CHoming::CHoming(int jdof, const int jointtype[])
     _init_time_bool = false;
     _operation_bool = false;
     _print_start_bool = false;
+    _t = 0.0;
     _init_t = 0.0;
     _start_t = 0.0;
     _wait_t = 5.0;
@@ -60,40 +61,40 @@ CHoming::CHoming(int jdof, const int jointtype[])
     for(int i=0; i<_joint_num; i++)
     {
         _tot_motion_t = _tot_motion_t + (_t_motion_1(i) + _t_motion_2(i) + _t_motion_3(i));
-    }
-    cout << "Total motion time: " << _tot_motion_t << "sec" <<endl;
-    
+    }    
 
     _motion_range_rad_max(0) = 5.0*DEG2RAD;
     _motion_range_rad_min(0) = -30.0*DEG2RAD;
     _motion_range_rad_max(1) = 80.0*DEG2RAD;
-    _motion_range_rad_min(1) = -10.0*DEG2RAD;
+    _motion_range_rad_min(1) = -5.0*DEG2RAD;
     _motion_range_rad_max(2) =  10.0*DEG2RAD;
     _motion_range_rad_min(2) = -30.0*DEG2RAD;
     _motion_range_rad_max(3) = 45.0*DEG2RAD;
     _motion_range_rad_min(3) = -5.0*DEG2RAD;
     _motion_range_rad_max(4) = 10.0*DEG2RAD;
     _motion_range_rad_min(4) = -30.0*DEG2RAD;
-    _motion_range_rad_max(5) = 10.0*DEG2RAD;
+    _motion_range_rad_max(5) = 20.0*DEG2RAD;
     _motion_range_rad_min(5) = -20.0*DEG2RAD;
-    _motion_range_rad_max(6) = 15.0*DEG2RAD;
+    _motion_range_rad_max(6) = 20.0*DEG2RAD;
     _motion_range_rad_min(6) = -20.0*DEG2RAD;
-    _motion_range_rad_max(7) = -5.0*DEG2RAD;
-    _motion_range_rad_min(7) = 30.0*DEG2RAD;
-    _motion_range_rad_max(8) = -80.0*DEG2RAD;
-    _motion_range_rad_min(8) = 10.0*DEG2RAD;
+
+    _motion_range_rad_max(7) = 30.0*DEG2RAD;
+    _motion_range_rad_min(7) = -5.0*DEG2RAD;
+    _motion_range_rad_max(8) = 5.0*DEG2RAD;
+    _motion_range_rad_min(8) = -80.0*DEG2RAD;
     _motion_range_rad_max(9) = 30.0*DEG2RAD;
     _motion_range_rad_min(9) = -10.0*DEG2RAD;
-    _motion_range_rad_max(10) = -45.0*DEG2RAD;
-    _motion_range_rad_min(10) = 5.0*DEG2RAD;
+    _motion_range_rad_max(10) = 5.0*DEG2RAD;
+    _motion_range_rad_min(10) = -45.0*DEG2RAD;
     _motion_range_rad_max(11) = 30.0*DEG2RAD;
     _motion_range_rad_min(11) = -10.0*DEG2RAD;
-    _motion_range_rad_max(12) = -10.0*DEG2RAD;
-    _motion_range_rad_min(12) = 20.0*DEG2RAD;
+    _motion_range_rad_max(12) = 20.0*DEG2RAD;
+    _motion_range_rad_min(12) = -20.0*DEG2RAD;
     _motion_range_rad_max(13) = 20.0*DEG2RAD;
-    _motion_range_rad_min(13) = -15.0*DEG2RAD;
-    _motion_range_rad_max(14) = 0.0;
-    _motion_range_rad_min(14) = 0.0;
+    _motion_range_rad_min(13) = -20.0*DEG2RAD;
+
+    _motion_range_rad_max(14) = 0.1;
+    _motion_range_rad_min(14) = -0.1;
 
     for(int i=0; i<jdof; i++)
     {
@@ -166,6 +167,7 @@ void CHoming::joint_velocity_homing_motion()
         if(_print_start_bool == false)
         {
             cout <<endl<<endl<< "Homing motion start, time: " << _t << "sec."<<endl<<endl;
+            cout << "Total motion time: " << _tot_motion_t << "sec" <<endl;
             _print_start_bool = true;
         }
         _qdot_des.setZero();
@@ -200,7 +202,7 @@ void CHoming::joint_velocity_homing_motion()
     {
         cout << "Homing motion for joint " << _count << " completed, time: " << _t << "sec."<<endl<<endl;
         calculate_homeoffset();
-        cout << "Homing Completed!" <<endl;
+        cout << "--------- Homing Completed! ---------" <<endl <<endl;
         _qdot_des.setZero();
         _operation_bool = true;
     }
@@ -255,4 +257,114 @@ void CHoming::reset_count()
 void CHoming::homing_velocity_control() //this must be run after 'read' and before 'write'
 {
     joint_velocity_homing_motion();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CMoveHome::CMoveHome(int jdof)
+{    
+    _joint_num = jdof;
+    _init_time_bool = false;
+    _operation_bool = false;
+    _print_start_bool = false;
+    _t = 0.0;
+    _init_t = 0.0;
+    _start_t = 0.0;
+    _wait_t = 5.0;
+    _motion_t = 5.0;
+
+    _q.setZero(_joint_num);
+    _q_init.setZero(_joint_num);
+    _q_offset.setZero(_joint_num);
+    _home_sensor.setZero(_joint_num);
+    _qdot_des.setZero(_joint_num);
+}
+
+CMoveHome::~CMoveHome()
+{
+}
+
+void CMoveHome::read(double time, double joint_position[], double home_offset_position[], int home_sensor[])
+{
+    if(_init_time_bool == false)
+    {
+        _init_t = time;
+        _start_t = _init_t + _wait_t;
+        _init_time_bool = true;
+        for(int i=0; i<_joint_num; i++)
+        {
+           _q_init(i) = joint_position[i];
+        }
+    }
+    _t = time;
+
+    for(int i=0; i<_joint_num; i++)
+    {
+        _q(i) = joint_position[i];
+        _q_offset(i) = home_offset_position[i];
+
+        if(home_sensor[i] == 0)
+        {
+            _home_sensor(i) = 0;
+        }
+        else
+        {
+            _home_sensor(i) = 1;
+        }        
+    }    
+}
+
+void CMoveHome::write(double desired_velocity[])
+{
+    for(int i=0; i<_joint_num; i++)
+    {
+        desired_velocity[i] = _qdot_des(i);
+    }
+}
+
+void CMoveHome::move_touchsensor_position()
+{
+    if(_t < _start_t && _operation_bool == false)
+    {
+        _qdot_des.setZero();
+    }
+    else if(_t >= _start_t && _t <=_start_t + _motion_t && _operation_bool == false)    
+    {
+        if(_print_start_bool == false)
+        {
+            cout <<endl<<endl<< "Homing motion start, time: " << _t << "sec."<<endl<<endl;
+            _print_start_bool = true;
+        }
+
+        for(int i=0; i<_joint_num; i++)
+        {
+            _qdot_des(i) = CustomMath::CubicDot(_t,_start_t, _start_t+_motion_t, _q_init(i), 0.0, _q_offset(i),0.0); 
+        }
+    }
+    else if(_t >_start_t + _motion_t && _operation_bool == false)
+    {
+        cout << "Move Home completed. time: " << _t << "sec."<<endl;
+        cout << "Checking touch sensor state..." <<endl;
+        _qdot_des.setZero();
+
+        for(int i=0; i<_joint_num; i++)
+        {
+            if(_home_sensor(i) > 0)
+            {
+                cout << "Touch sensor " << i << ": On." << endl;
+            }            
+            else
+            {
+                cout << "Touch sensor " << i << ": Off. Warning! Offset position could be wrong!" << endl;
+            }
+        }
+        cout << "--------- Homing Checking Complete! ---------" <<endl <<endl;
+        _operation_bool = true;
+    }
+    else
+    {
+        _qdot_des.setZero();
+    }
 }

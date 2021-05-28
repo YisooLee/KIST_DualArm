@@ -84,12 +84,12 @@ USHORT	targetReached[ELMO_NUM];
 double	frictionV_Amp[ELMO_NUM];
 double	frictionC_Amp[ELMO_NUM];
 
-const int    set_direction[ELMO_NUM]		= {		 1,      1,       1,      1,       1,      -1,       1,       1,       1,       1,       1,       1,       1,       1,       1 };	// direction CW or CCW
+const int    set_direction[ELMO_NUM]		= {		 1,      1,       1,      1,       1,      1,       1,       1,       1,       1,       1,       1,       1,       1,       1 };	// direction CW or CCW
 const int    set_joint_type[ELMO_NUM]       = {     0,       0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      1}; //joint type, 0: revolute. 1: prismatic
 //const double    max_position_limit[ELMO_NUM] = {  90*DEG2RAD,  45*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD,  90*DEG2RAD,  45*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)
 //const double    min_position_limit[ELMO_NUM] = { -25*DEG2RAD, -15*DEG2RAD, -90*DEG2RAD, -22*DEG2RAD, -90*DEG2RAD, -45*DEG2RAD, -60*DEG2RAD, -25*DEG2RAD, -15*DEG2RAD, -90*DEG2RAD, -22*DEG2RAD, -90*DEG2RAD, -45*DEG2RAD, -60*DEG2RAD, -0.35}; //  minimum limit degree (rad, last is m)
-const double    max_position_limit[ELMO_NUM] = {  90.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  120.0*DEG2RAD,  90.0*DEG2RAD,  45.0*DEG2RAD,  60.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  30.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  60.0*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)
-const double    min_position_limit[ELMO_NUM] = { -90.0*DEG2RAD, -15.0*DEG2RAD, -90.0*DEG2RAD, -30.0*DEG2RAD, -90.0*DEG2RAD, -90.0*DEG2RAD, -60.0*DEG2RAD, -90.0*DEG2RAD, -15.0*DEG2RAD, -90.0*DEG2RAD, -120.0*DEG2RAD, -90.0*DEG2RAD, -45.0*DEG2RAD, -60.0*DEG2RAD, -0.35}; //  minimum limit degree (rad, last is m)
+const double    max_position_limit[ELMO_NUM] = {  90.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  120.0*DEG2RAD,  90.0*DEG2RAD,  45.0*DEG2RAD,  60.0*DEG2RAD,  90.0*DEG2RAD,  15.0*DEG2RAD,  90.0*DEG2RAD,  30.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  60.0*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)
+const double    min_position_limit[ELMO_NUM] = { -90.0*DEG2RAD, -15.0*DEG2RAD, -90.0*DEG2RAD, -30.0*DEG2RAD,  -90.0*DEG2RAD, -90.0*DEG2RAD, -60.0*DEG2RAD, -90.0*DEG2RAD, -90.0*DEG2RAD, -90.0*DEG2RAD, -120.0*DEG2RAD, -90.0*DEG2RAD, -45.0*DEG2RAD, -60.0*DEG2RAD, -0.35}; //  minimum limit degree (rad, last is m)
 const LONG   set_gearRatio[ELMO_NUM]		= {    101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,       3 };	// harmonic gear ratio
 const LONG   set_resolution[ELMO_NUM]		= {  10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000 };	// encoder pulse 2500, qep 4, total 10000/rev = 2500*4
 //const double set_continuosCurrent[ELMO_NUM] = { 5280.0,  5280.0,  4850.0,  4850.0,  3780.0,  3780.0,  3780.0,  5280.0,  5280.0,  4850.0,  4850.0,  3780.0,  3780.0,  3780.0, 5280.0};	// motor continuous current, unit is [mA]	
@@ -208,6 +208,7 @@ bool bool_ethecat_loop = true;
 
 int joint_num = ELMO_NUM;
 CHoming HomingControl(joint_num, set_joint_type);
+CMoveHome MoveHomeControl(joint_num);
 
 const int HOMING_START_BIT = 4;
 const int FAULT_BIT = 3;
@@ -357,6 +358,11 @@ void ethercat_run(char *ifname, char *mode)
     {
         cout << "Control Mode: Move Linear Motor Up" << endl<<endl;
         control_mode = 1; //velocity mode
+    }
+    else if(strcmp(mode,"checkhome")==0)
+    {
+        cout << "Control Mode: Move to Touch Sensor" << endl<<endl;
+        control_mode = 1; //position mode
     }
     else if(strcmp(mode,"none")==0)
     {        
@@ -761,13 +767,16 @@ void ethercat_run(char *ifname, char *mode)
                                         velocityDesired[14] = 0.03;
                                     }
                                 }
+                                else if(strcmp(mode,"checkhome")==0)
+                                {
+                                    MoveHomeControl.read(time_for_controller, positionElmo, positionOffset, touchState);                                    
+                                    MoveHomeControl.move_touchsensor_position();
+                                    MoveHomeControl.write(velocityDesired);
+                                }
                                 else
                                 {
                                     
                                 }
-                                
-                                
-                                
 
                                 for (int i = 1; i <= ec_slavecount; i++)
                                 {
@@ -812,10 +821,10 @@ void ethercat_run(char *ifname, char *mode)
                                         else if(control_mode == 2)
                                         {
                                             //target position (when mode of operation is CyclicSynchronousVelocitymode)
-                                            //txPDO[i-1]->targetVelocity = (int);
+                                            txPDO[i-1]->targetPosition = (int32_t) positionDesired_cnt[i-1];
                                         }                                        
 
-                                        txPDO[i-1]->targetTorque = (int16_t) (0); //temporary                                                                                                                                 
+                                        //txPDO[i-1]->targetTorque = (int16_t) (0); //temporary                                                                                                                                 
                                         //txPDO[i-1]->targetVelocity = (int32_t) (0); //temporary
 
 
@@ -850,6 +859,7 @@ void ethercat_run(char *ifname, char *mode)
                                     log_mem[log_cnt][1+i] = positionElmo[i];
                                     log_mem[log_cnt][1+15+i] = velocityElmo[i];
                                     log_mem[log_cnt][1+30+i] = torqueElmo[i];
+                                    log_mem[log_cnt][1+45+i] = touchState[i];
                                 }
 
                                 log_cnt = log_cnt + 1;
