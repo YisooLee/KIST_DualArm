@@ -45,7 +45,7 @@
 #define USHORT unsigned short
 #define LONG long
 #define _2PI 6.28318530717959
-#define LOG_SIZE 100000
+#define LOG_SIZE 50000
 
 using namespace std;
 
@@ -84,10 +84,10 @@ USHORT	targetReached[ELMO_NUM];
 double	frictionV_Amp[ELMO_NUM];
 double	frictionC_Amp[ELMO_NUM];
 
+const double set_lead = 0.005; // [m/rev]
+const double set_efficiency_lead = 0.8; // need to find
 const int    set_direction[ELMO_NUM]		= {		 1,      1,       1,      1,       1,      1,       1,       1,       1,       1,       1,       1,       1,       1,       1 };	// direction CW or CCW
 const int    set_joint_type[ELMO_NUM]       = {     0,       0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      1}; //joint type, 0: revolute. 1: prismatic
-//const double    max_position_limit[ELMO_NUM] = {  90*DEG2RAD,  45*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD,  90*DEG2RAD,  45*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD,  60*DEG2RAD,  90*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)
-//const double    min_position_limit[ELMO_NUM] = { -25*DEG2RAD, -15*DEG2RAD, -90*DEG2RAD, -22*DEG2RAD, -90*DEG2RAD, -45*DEG2RAD, -60*DEG2RAD, -25*DEG2RAD, -15*DEG2RAD, -90*DEG2RAD, -22*DEG2RAD, -90*DEG2RAD, -45*DEG2RAD, -60*DEG2RAD, -0.35}; //  minimum limit degree (rad, last is m)
 const double    max_position_limit[ELMO_NUM] = {  90.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  120.0*DEG2RAD,  90.0*DEG2RAD,  45.0*DEG2RAD,  60.0*DEG2RAD,  90.0*DEG2RAD,  15.0*DEG2RAD,  90.0*DEG2RAD,  30.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  60.0*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)
 const double    min_position_limit[ELMO_NUM] = { -90.0*DEG2RAD, -15.0*DEG2RAD, -90.0*DEG2RAD, -30.0*DEG2RAD,  -90.0*DEG2RAD, -90.0*DEG2RAD, -60.0*DEG2RAD, -90.0*DEG2RAD, -90.0*DEG2RAD, -90.0*DEG2RAD, -120.0*DEG2RAD, -90.0*DEG2RAD, -45.0*DEG2RAD, -60.0*DEG2RAD, -0.35}; //  minimum limit degree (rad, last is m)
 const LONG   set_gearRatio[ELMO_NUM]		= {    101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,       3 };	// harmonic gear ratio
@@ -99,9 +99,8 @@ const LONG   set_maxVelocity[ELMO_NUM]		= {   5363,    5363,    5363,    5363,  
 const double set_frictionC_Amp[ELMO_NUM]	= { 0.2377,  0.2377,  0.2377,  0.2377,  0.2913,  0.2913,  0.1588,  0.1588,  0.3090,  0.3090,  0.2908,  0.2908,  0.3090,  0.3090, 0.0 };	// joint module friction(coulomb term)
 const double set_frictionV_Amp[ELMO_NUM]	= { 0.7405,  0.7405,  0.7405,  0.7405,  0.4461,  0.4461,  0.4194,  0.4194,  0.1330,  0.1330,  0.1210,  0.1210,  0.1330,  0.1330, 0.0 };	// joint module friction(viscous term)
 const double continuous_stall_torque[ELMO_NUM] = { 0.429,  0.429,  0.384,  0.384,  0.109,  0.109,  0.109,  0.429,  0.429,  0.384,  0.384,  0.109,  0.109,  0.109,  0.429 }; // RBE_01810 -> 0.429, RBE_01511 -> 0.384, RBE_00711 -> 0.109 [N/m]
-const double mech_max_speed[ELMO_NUM] = { 14000,  14000,  16500,  16500,  20000,  20000,  20000,  14000,  14000,  16500,  16500,  20000,  20000,  20000, 14000 }; // RBE_01810 -> 14000, RBE_01511 -> 16500, RBE_00711 -> 20000 [RPM]
-const double set_lead = 0.005; // [m/rev]
-const double set_efficiency_lead = 0.8; // need to find
+const double mech_max_speed[ELMO_NUM]       = { 14000,  14000,  16500,  16500,  20000,  20000,  20000,  14000,  14000,  16500,  16500,  20000,  20000,  20000, 14000 }; // RBE_01810 -> 14000, RBE_01511 -> 16500, RBE_00711 -> 20000 [RPM]
+const double touch_probe_position_rad[ELMO_NUM] = {-15.0*DEG2RAD, 45.0*DEG2RAD, -15.0*DEG2RAD, 30.0*DEG2RAD, -15.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 15.0*DEG2RAD, -45.0*DEG2RAD, 15.0*DEG2RAD, -30.0*DEG2RAD, 15.0*DEG2RAD, 0.0, 0.0, 0.0}; //touch sensor position (distance from home position) rad & m
 
 double  RadToPosition(double rad) {return (double)rad / _2PI * set_lead;}
 double	CntToDeg(double  cnt, USHORT ielmo)		{return (double)cnt * 360.0 / oneRevolute_CNT[ielmo];}	// [Count]  -> [degree]
@@ -188,7 +187,8 @@ double min_position_range = 0.0;
 
 double time_for_controller = 0.0;
 
-double positionOffset[ELMO_NUM];
+double positionOffset_rad[ELMO_NUM];
+double positionHome_rad[ELMO_NUM];
 
 double positionDesired_rad = 0.0;
 double positionDesired_m = 0.0;
@@ -208,7 +208,7 @@ bool bool_ethecat_loop = true;
 
 int joint_num = ELMO_NUM;
 CHoming HomingControl(joint_num, set_joint_type);
-CMoveHome MoveHomeControl(joint_num);
+CMoveHome MoveHomeControl(joint_num, touch_probe_position_rad);
 
 const int HOMING_START_BIT = 4;
 const int FAULT_BIT = 3;
@@ -317,17 +317,7 @@ void log_statefile() // text file open & write.
     fout.close();
     cout << "<state_log.txt> Logging Complete."<<endl;
 
-    cout << "Logging <position_offset.txt>"<<endl;
-    ofstream fout2;
-    fout2.open("log/position_offset.txt");
-    for(int i=0; i<ELMO_NUM; i++)
-    {
-        fout2 << positionOffset[i]<<endl;
-    }
-    fout2.close();
-    cout << "<position_offset.txt> Logging Complete."<<endl;
-
-    cout << "--------- Logging Complete ---------"<<endl;
+    cout << "--------- Logging Complete ---------"<<endl<<endl;
 }
 
 
@@ -364,6 +354,11 @@ void ethercat_run(char *ifname, char *mode)
         cout << "Control Mode: Move to Touch Sensor" << endl<<endl;
         control_mode = 1; //position mode
     }
+    else if(strcmp(mode,"movehome")==0)
+    {
+        cout << "Control Mode: Move to Home Position" << endl<<endl;
+        control_mode = 1; //position mode
+    }
     else if(strcmp(mode,"none")==0)
     {        
         cout << "Control Mode: Not determined!!" << endl << " Torque mode with Zero torque activated!!"<< endl<<endl;
@@ -398,8 +393,8 @@ void ethercat_run(char *ifname, char *mode)
                     exit(100);                    
                 }
 
-                fin >> positionOffset[i];                                
-                cout << positionOffset[i] << " ";
+                fin >> positionOffset_rad[i];                                
+                cout << positionOffset_rad[i] << " ";
             }
             cout <<endl;            
         }
@@ -750,10 +745,20 @@ void ethercat_run(char *ifname, char *mode)
 
                                 if(strcmp(mode,"home")==0)
                                 {
-                                    HomingControl.read(time_for_controller, positionElmo, touchState);
-                                    //HomingControl.read(time_for_controller, positionElmo_rad, velocityElmo_radPsec, torqueElmo_Nm, touchState);
-                                    HomingControl.homing_velocity_control();
-                                    HomingControl.write(velocityDesired, positionOffset);
+                                    if(time_for_controller >= 0.5) //wait 0.5sec before start
+                                    {
+                                        HomingControl.read(time_for_controller, positionElmo, touchState);
+                                        //HomingControl.read(time_for_controller, positionElmo_rad, velocityElmo_radPsec, torqueElmo_Nm, touchState);
+                                        HomingControl.homing_velocity_control();
+                                        HomingControl.write(velocityDesired, positionOffset_rad);
+                                    }
+                                    else
+                                    {
+                                        for (int i = 1; i <= ec_slavecount; i++) //initialize
+                                        {
+                                            velocityDesired[i] = 0.0;
+                                        }
+                                    }
                                 }
                                 else if(strcmp(mode,"moveup")==0)
                                 {
@@ -767,11 +772,30 @@ void ethercat_run(char *ifname, char *mode)
                                         velocityDesired[14] = 0.03;
                                     }
                                 }
-                                else if(strcmp(mode,"checkhome")==0)
+                                else if(strcmp(mode,"checkhome")==0 || strcmp(mode,"movehome")==0)
                                 {
-                                    MoveHomeControl.read(time_for_controller, positionElmo, positionOffset, touchState);                                    
-                                    MoveHomeControl.move_touchsensor_position();
-                                    MoveHomeControl.write(velocityDesired);
+                                    if(time_for_controller >= 0.5) //wait 0.5sec before start
+                                    {
+                                        MoveHomeControl.read(time_for_controller, positionElmo, positionOffset_rad, touchState);
+
+                                        if(strcmp(mode,"checkhome")==0)
+                                        {
+                                            MoveHomeControl.move_touchsensor_position();
+                                        }
+                                        else if(strcmp(mode,"movehome")==0)
+                                        {
+                                            MoveHomeControl.move_home_position();
+                                        }
+
+                                        MoveHomeControl.write(velocityDesired);
+                                    }
+                                    else
+                                    {
+                                        for (int i = 1; i <= ec_slavecount; i++) //initialize
+                                        {
+                                            velocityDesired[i] = 0.0;
+                                        }
+                                    }
                                 }
                                 else
                                 {
@@ -851,7 +875,7 @@ void ethercat_run(char *ifname, char *mode)
                                             }                                     
                                         }
                                     }
-                                }
+                                }                               
   
                                 log_mem[log_cnt][0] = time_for_controller;
                                 for(int i=0; i<ELMO_NUM; i++)

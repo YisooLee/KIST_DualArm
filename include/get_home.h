@@ -3,6 +3,7 @@
 #define __GETHOME_H
 
 #include <iostream>
+#include <fstream>
 #include <eigen3/Eigen/Dense>
 #include "custommath.h"
 
@@ -78,11 +79,12 @@ class CHoming
 class CMoveHome
 {
     public:
-	CMoveHome(int jdof);
+	CMoveHome(int jdof, const double touch_probe_position_rad[]);
 	virtual ~CMoveHome();
 
     void read(double time, double joint_position[], double home_offset_position[], int home_sensor[]);
     void move_touchsensor_position();
+    void move_home_position();
     void write(double desired_velocity[]);
 
     private:
@@ -101,6 +103,7 @@ class CMoveHome
     VectorCXd _q_offset;
     VectorCXi _home_sensor;
     VectorCXd _qdot_des;
+    VectorCXd _q_touch_probe_rad;
 };
 
 #endif

@@ -244,6 +244,16 @@ void CHoming::calculate_homeoffset()
             cout << "Detected Home Position of Joint "<< i << ": " << _q_offset(i) << endl;
         }
     }
+
+    cout << "Logging <position_offset.txt>"<<endl;
+    ofstream fout2;
+    fout2.open("log/position_offset.txt");
+    for(int i=0; i<_joint_num; i++)
+    {
+        fout2 << _q_offset(i)<<endl;
+    }
+    fout2.close();
+    cout << "<position_offset.txt> Logging Complete."<<endl;
 }
 
 void CHoming::reset_count()
@@ -263,7 +273,7 @@ void CHoming::homing_velocity_control() //this must be run after 'read' and befo
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CMoveHome::CMoveHome(int jdof)
+CMoveHome::CMoveHome(int jdof, const double touch_probe_position_rad[])
 {    
     _joint_num = jdof;
     _init_time_bool = false;
@@ -280,6 +290,12 @@ CMoveHome::CMoveHome(int jdof)
     _q_offset.setZero(_joint_num);
     _home_sensor.setZero(_joint_num);
     _qdot_des.setZero(_joint_num);
+    _q_touch_probe_rad.setZero(_joint_num);
+
+    for(int i=0; i<jdof; i++)
+    {
+        _q_touch_probe_rad(i) = touch_probe_position_rad[i];
+    }
 }
 
 CMoveHome::~CMoveHome()
@@ -334,7 +350,7 @@ void CMoveHome::move_touchsensor_position()
     {
         if(_print_start_bool == false)
         {
-            cout <<endl<<endl<< "Homing motion start, time: " << _t << "sec."<<endl<<endl;
+            cout <<endl<<endl<< "Motion start, time: " << _t << "sec."<<endl<<endl;
             _print_start_bool = true;
         }
 
@@ -345,7 +361,7 @@ void CMoveHome::move_touchsensor_position()
     }
     else if(_t >_start_t + _motion_t && _operation_bool == false)
     {
-        cout << "Move Home completed. time: " << _t << "sec."<<endl;
+        cout << "Move to Touch Sensor complete. time: " << _t << "sec."<<endl;
         cout << "Checking touch sensor state..." <<endl;
         _qdot_des.setZero();
 
@@ -361,6 +377,36 @@ void CMoveHome::move_touchsensor_position()
             }
         }
         cout << "--------- Homing Checking Complete! ---------" <<endl <<endl;
+        _operation_bool = true;
+    }
+    else
+    {
+        _qdot_des.setZero();
+    }
+}
+
+void CMoveHome::move_home_position()
+{
+    if(_t < _start_t && _operation_bool == false)
+    {
+        _qdot_des.setZero();
+    }
+    else if(_t >= _start_t && _t <=_start_t + _motion_t && _operation_bool == false)    
+    {
+        if(_print_start_bool == false)
+        {
+            cout <<endl<<endl<< "Homing motion start, time: " << _t << "sec."<<endl<<endl;
+            _print_start_bool = true;
+        }
+
+        for(int i=0; i<_joint_num; i++)
+        {
+            _qdot_des(i) = CustomMath::CubicDot(_t,_start_t, _start_t+_motion_t, _q_init(i), 0.0, _q_offset(i) - _q_touch_probe_rad(i), 0.0); 
+        }
+    }
+    else if(_t >_start_t + _motion_t && _operation_bool == false)
+    {
+        cout << "Move to Home Position complete. time: " << _t << "sec."<<endl;
         _operation_bool = true;
     }
     else
