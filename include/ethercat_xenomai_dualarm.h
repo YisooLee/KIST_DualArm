@@ -143,7 +143,7 @@ namespace EtherCAT_Elmo
         };
         struct elmo_gold_rx
         {
-            int32_t positionActualValue; // this one !!!!!
+            int32_t positionActualValue;
             uint32_t homingSensor;
             uint16_t statusWord;            
             int32_t velocityActualValue;

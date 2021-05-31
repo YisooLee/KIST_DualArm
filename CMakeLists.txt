@@ -15,7 +15,8 @@ include
 )
 
 add_library(dualarm_lib
-  get_home.cpp
+  src/get_home.cpp
+  src/task_controller.cpp
 )
 
 target_link_libraries(main soem
