@@ -5,11 +5,21 @@
 #define RAD2DEG 1/DEG2RAD
 #define GRAVITY 9.80665
 #define PI 3.1415926535897932384626433
+#define CustomArraySize 50
 
 #include "math.h"
 #include <eigen3/Eigen/Dense>
 using namespace Eigen;
 
+namespace Eigen
+{
+		typedef Matrix<double, -1, -1, 0, CustomArraySize, CustomArraySize> MatrixCXd;
+		typedef Matrix<double, -1, -1, 0, CustomArraySize, 1> VectorCXd;
+        typedef Matrix<int, -1, -1, 0, CustomArraySize, CustomArraySize> MatrixCXi;
+		typedef Matrix<int, -1, -1, 0, CustomArraySize, 1> VectorCXi;
+        typedef Matrix<bool, -1, -1, 0, CustomArraySize, CustomArraySize> MatrixCXb;
+		typedef Matrix<bool, -1, -1, 0, CustomArraySize, 1> VectorCXb;
+}
 
 namespace CustomMath
 {

@@ -6,17 +6,6 @@
 #include <eigen3/Eigen/Dense>
 #include "custommath.h"
 
-#define CustomArraySize 50
-namespace Eigen
-{
-		typedef Matrix<double, -1, -1, 0, CustomArraySize, CustomArraySize> MatrixCXd;
-		typedef Matrix<double, -1, -1, 0, CustomArraySize, 1> VectorCXd;
-        typedef Matrix<int, -1, -1, 0, CustomArraySize, CustomArraySize> MatrixCXi;
-		typedef Matrix<int, -1, -1, 0, CustomArraySize, 1> VectorCXi;
-        typedef Matrix<bool, -1, -1, 0, CustomArraySize, CustomArraySize> MatrixCXb;
-		typedef Matrix<bool, -1, -1, 0, CustomArraySize, 1> VectorCXb;
-}
-
 using namespace std;
 using namespace Eigen;
 
@@ -26,15 +15,19 @@ class CTaskController
 	CTaskController(int jdof);
 	virtual ~CTaskController();
 
-    void read();
-    void write();
+    void read(double time, double joint_position[], double joint_velocity[], double joint_force[]);
+    void write(double torque_desired[]);
     void compute();
     
     int _jdof;
 
     private:
+    void initialize();
     void model_update();
 
+    double _time;
+    VectorCXd _q, _qdot, _torque; //state
+    VectorCXd _q_des, _qdot_des, _torque_des; //reference
 };
 
 #endif

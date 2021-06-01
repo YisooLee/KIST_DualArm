@@ -32,6 +32,7 @@
 #include "ethercatprint.h"
 
 #include "get_home.h"
+#include "task_controller.h"
 
 #include <eigen3/Eigen/Dense>
 
@@ -68,22 +69,16 @@ bool ecat_number_ok = false;
 bool ecat_WKC_ok = false;
 bool de_shutdown = false;
 
-double  oneRevolute_CNT[ELMO_NUM];	// encoder count * gear ratio
 
-double	torque_const[ELMO_NUM];		// Unit [Nm/A]
-double	continuosCurrent[ELMO_NUM];	// Unit [mA]
-
-double  Amp2Torq[ELMO_NUM];			// [Amp]	-> [Torque]
-double  Torq2mAmp[ELMO_NUM];		// [mAmp]	<- [Torque]
 	
 USHORT	elmoState[ELMO_NUM];
 char	modeState[ELMO_NUM];
 USHORT	servoState[ELMO_NUM];
 USHORT	targetReached[ELMO_NUM];
-	
-double	frictionV_Amp[ELMO_NUM];
-double	frictionC_Amp[ELMO_NUM];
 
+double  oneRevolute_CNT[ELMO_NUM];	// encoder count * gear ratio
+double  Amp2Torq[ELMO_NUM];			// [Amp]	-> [Torque]
+double  Torq2Amp[ELMO_NUM];		// [mAmp]	<- [Torque]	
 const double set_lead = 0.005; // [m/rev]
 const double set_efficiency_lead = 0.8; // need to find
 const int    set_direction[ELMO_NUM]		= {		 1,      1,       1,      1,       1,      1,       1,       1,       1,       1,       1,       1,       1,       1,       1 };	// direction CW or CCW
@@ -92,12 +87,9 @@ const double    max_position_limit[ELMO_NUM] = {  90.0*DEG2RAD,  90.0*DEG2RAD,  
 const double    min_position_limit[ELMO_NUM] = { -90.0*DEG2RAD, -15.0*DEG2RAD, -90.0*DEG2RAD, -30.0*DEG2RAD,  -90.0*DEG2RAD, -90.0*DEG2RAD, -60.0*DEG2RAD, -90.0*DEG2RAD, -90.0*DEG2RAD, -90.0*DEG2RAD, -120.0*DEG2RAD, -90.0*DEG2RAD, -45.0*DEG2RAD, -60.0*DEG2RAD, -0.35}; //  minimum limit degree (rad, last is m)
 const LONG   set_gearRatio[ELMO_NUM]		= {    101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,     101,       3 };	// harmonic gear ratio
 const LONG   set_resolution[ELMO_NUM]		= {  10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000,   10000 };	// encoder pulse 2500, qep 4, total 10000/rev = 2500*4
-//const double set_continuosCurrent[ELMO_NUM] = { 5280.0,  5280.0,  4850.0,  4850.0,  3780.0,  3780.0,  3780.0,  5280.0,  5280.0,  4850.0,  4850.0,  3780.0,  3780.0,  3780.0, 5280.0};	// motor continuous current, unit is [mA]	
 const double set_continuosCurrent[ELMO_NUM] = { 7470.0,  7470.0,  6860.0,  6860.0,  5350.0,  5350.0,  5350.0,  7470.0,  7470.0,  6860.0,  6860.0,  5350.0,  5350.0,  5350.0, 7470.0};	// motor continuous current, unit is [mA]	
 const double set_torque_const[ELMO_NUM]		= { 0.0855,  0.0855,  0.0833,  0.0833,  0.0318,  0.0318,  0.0318,  0.0855,  0.0855,  0.0833,  0.0833,  0.0318,  0.0318,  0.0318, 0.0855};	// motor torque constant, unit is [Nm/A]
 const LONG   set_maxVelocity[ELMO_NUM]		= {   5363,    5363,    5363,    5363,    5498,    5498,    5498,    5498,   17700,   17700,   17700,   17700,   17700,   17700, 5363 };	// motor maximal speed, unit is [RPM]
-const double set_frictionC_Amp[ELMO_NUM]	= { 0.2377,  0.2377,  0.2377,  0.2377,  0.2913,  0.2913,  0.1588,  0.1588,  0.3090,  0.3090,  0.2908,  0.2908,  0.3090,  0.3090, 0.0 };	// joint module friction(coulomb term)
-const double set_frictionV_Amp[ELMO_NUM]	= { 0.7405,  0.7405,  0.7405,  0.7405,  0.4461,  0.4461,  0.4194,  0.4194,  0.1330,  0.1330,  0.1210,  0.1210,  0.1330,  0.1330, 0.0 };	// joint module friction(viscous term)
 const double continuous_stall_torque[ELMO_NUM] = { 0.429,  0.429,  0.384,  0.384,  0.109,  0.109,  0.109,  0.429,  0.429,  0.384,  0.384,  0.109,  0.109,  0.109,  0.429 }; // RBE_01810 -> 0.429, RBE_01511 -> 0.384, RBE_00711 -> 0.109 [N/m]
 const double mech_max_speed[ELMO_NUM]       = { 14000,  14000,  16500,  16500,  20000,  20000,  20000,  14000,  14000,  16500,  16500,  20000,  20000,  20000, 14000 }; // RBE_01810 -> 14000, RBE_01511 -> 16500, RBE_00711 -> 20000 [RPM]
 const double touch_probe_position_rad[ELMO_NUM] = {-15.0*DEG2RAD, 45.0*DEG2RAD, -15.0*DEG2RAD, 30.0*DEG2RAD, -15.0*DEG2RAD, 0.0*DEG2RAD, 0.0*DEG2RAD, 15.0*DEG2RAD, -45.0*DEG2RAD, 15.0*DEG2RAD, -30.0*DEG2RAD, 15.0*DEG2RAD, 0.0, 0.0, 0.0}; //touch sensor position (distance from home position) rad & m
@@ -105,13 +97,14 @@ const double touch_probe_position_rad[ELMO_NUM] = {-15.0*DEG2RAD, 45.0*DEG2RAD, 
 double  RadToPosition(double rad) {return (double)rad / _2PI * set_lead;}
 double	CntToDeg(double  cnt, USHORT ielmo)		{return (double)cnt * 360.0 / oneRevolute_CNT[ielmo];}	// [Count]  -> [degree]
 double	CntToRad(LONG  cnt, USHORT ielmo)		{return (double)cnt * _2PI / oneRevolute_CNT[ielmo];}
-double	AmpToTorq(double ampare, USHORT ielmo)	{return (ampare * Amp2Torq[ielmo]);}			// [Amp]	-> [Torque]
-double	TorqTomAmp(double torque, USHORT ielmo)	{return (torque * Torq2mAmp[ielmo]);}
+double	AmpToNm(double ampare, USHORT ielmo)	{return (ampare * Amp2Torq[ielmo]);}			// [Amp]	-> [Torque]
+double	NmToAmp(double torque, USHORT ielmo)	{return (torque * Torq2Amp[ielmo]);}
 //double  TorqToNewton(double torque, USHORT ielmo) {return (_2PI * 0.8 *(torque - ((9.81*0.5*25.62*0.008*set_gearRatio[ielmo])/_2PI*0.8)))/(0.008*set_gearRatio[ielmo]);} // [Torque] -> [Force]
-double  TorqToNewton(double torque, USHORT ielmo) {return (_2PI * set_efficiency_lead *torque /(set_lead*set_gearRatio[ielmo]));} // [Torque] -> [Force]
+double  NmToN(double torque, USHORT ielmo)      {return (_2PI * set_efficiency_lead *torque /(set_lead*set_gearRatio[ielmo]));} // [Torque] -> [Force]
+double  NToNm(double force, USHORT ielmo)       {return ((force*set_lead*set_gearRatio[ielmo])/(_2PI * set_efficiency_lead));} // [Torque] -> [Force]
 double  CntPSecToRadPsec(double CntPsec, USHORT ielmo) {return (double)CntPsec * _2PI / oneRevolute_CNT[ielmo];} // [Cnt/s] -> [Rad/s]
-double  RadPsecToMPsec(double RadPsec) {return (double)RadPsec / _2PI * set_lead;} // [Rad/s] -> [m/s]
-double  mPsecToRadPsec(double mPsec) {return (double)_2PI*mPsec/set_lead;} // [m/s] -> [Rad/s]
+double  RadPsecToMPsec(double RadPsec)          {return (double)RadPsec / _2PI * set_lead;} // [Rad/s] -> [m/s]
+double  mPsecToRadPsec(double mPsec)            {return (double)_2PI*mPsec/set_lead;} // [m/s] -> [Rad/s]
 double  RadPsecToCntPsec(double RadPsec, USHORT ielmo) {return (double)oneRevolute_CNT[ielmo]*RadPsec/_2PI;}; //[Rad/s] -> [Cnt/s]
 
 // rx, tx setting
@@ -209,6 +202,7 @@ bool bool_ethecat_loop = true;
 int joint_num = ELMO_NUM;
 CHoming HomingControl(joint_num, set_joint_type);
 CMoveHome MoveHomeControl(joint_num, touch_probe_position_rad);
+CTaskController TaskControl(joint_num);
 
 const int HOMING_START_BIT = 4;
 const int FAULT_BIT = 3;
@@ -359,11 +353,16 @@ void ethercat_run(char *ifname, char *mode)
         cout << "Control Mode: Move to Home Position" << endl<<endl;
         control_mode = 1; //position mode
     }
+    else if(strcmp(mode,"task")==0)
+    {
+        cout << "Control Mode: Task Space Control with Joint Torque Control" << endl<<endl;
+        control_mode = 0; //torque mode
+    }
     else if(strcmp(mode,"none")==0)
     {        
         cout << "Control Mode: Not determined!!" << endl << " Torque mode with Zero torque activated!!"<< endl<<endl;
         control_mode = 0; //torque mode
-    }
+    }    
     else
     {
         cout << "Control Mode: Wrong command!!" << endl << " Torque mode with Zero torque activated!!"<< endl<<endl;
@@ -581,15 +580,9 @@ void ethercat_run(char *ifname, char *mode)
 
                                 for(int i=0; i<ELMO_NUM; i++)
                                 {
-                                    oneRevolute_CNT[i] = set_direction[i] * set_gearRatio[i] * set_resolution[i];	// one revolution of joint module, ex) -1[dirction] * 100[gear ratio] * 10000[pulse] = 100000
-                                    torque_const[i] = set_torque_const[i];
-                                    continuosCurrent[i] = set_continuosCurrent[i];                                    
-
-                                    frictionV_Amp[i] = set_direction[i] * set_frictionV_Amp[i];
-                                    frictionC_Amp[i] = set_direction[i] * set_frictionC_Amp[i];
-
-                                    Amp2Torq[i] = torque_const[i] * (set_direction[i] * set_gearRatio[i]);			// [A] to [Nm] @ gear outer Torque
-                                    Torq2mAmp[i] = 1000.0/(torque_const[i] * (set_direction[i] * set_gearRatio[i]));// [Nm] to [mA] @ gear inner mAmpere
+                                    oneRevolute_CNT[i] = set_direction[i] * set_gearRatio[i] * set_resolution[i];	// one revolution of joint module, ex) -1[dirction] * 100[gear ratio] * 10000[pulse] = 100000                                                                        
+                                    Amp2Torq[i] = set_torque_const[i] * (set_direction[i] * set_gearRatio[i]);			// [A] to [Nm] @ gear outer Torque
+                                    Torq2Amp[i] = 1.0/(set_torque_const[i] * (set_direction[i] * set_gearRatio[i]));// [Nm] to [A] @ gear inner Ampere
                                 }
 
                                 for (int i = 1; i <= ec_slavecount; i++)
@@ -663,14 +656,14 @@ void ethercat_run(char *ifname, char *mode)
                             
                                         positionElmo_rad = CntToRad(positionElmo_cnt, i-1);
                                         velocityElmo_radPsec = CntPSecToRadPsec(velocityElmo_cntPsec,i-1);
-                                        torqueElmo_current = torqueElmo_percentage/1000.0 * continuosCurrent[i-1]/1000.0; //calculate current
-                                        torqueElmo_Nm = AmpToTorq(torqueElmo_current, i-1); //calculate torque  (Nm)                         
+                                        torqueElmo_current = torqueElmo_percentage/1000.0 * set_continuosCurrent[i-1]/1000.0; //calculate current
+                                        torqueElmo_Nm = AmpToNm(torqueElmo_current, i-1); //calculate torque  (Nm)                         
 
                                         if(set_joint_type[i-1] == 1) // for prismatic joint 
                                         {                                               
                                             positionElmo_m = RadToPosition(positionElmo_rad);
                                             velocityElmo_mPsec = RadPsecToMPsec(velocityElmo_radPsec);
-                                            torqueElmo_N = TorqToNewton(torqueElmo_Nm, i-1);
+                                            torqueElmo_N = NmToN(torqueElmo_Nm, i-1);
                                             positionElmo[i-1] = positionElmo_m;
                                             velocityElmo[i-1] = velocityElmo_mPsec;
                                             torqueElmo[i-1] = torqueElmo_N;
@@ -697,8 +690,8 @@ void ethercat_run(char *ifname, char *mode)
 
                                         if(set_joint_type[i-1] == 1) //for prismatic joint
                                         {
-                                            max_torque_range = TorqToNewton(2.0*continuous_stall_torque[i-1] * set_gearRatio[i-1], i-1);
-                                            min_torque_range = TorqToNewton(-2.0*continuous_stall_torque[i-1] * set_gearRatio[i-1], i-1);                                       
+                                            max_torque_range = NmToN(2.0*continuous_stall_torque[i-1] * set_gearRatio[i-1], i-1);
+                                            min_torque_range = NmToN(-2.0*continuous_stall_torque[i-1] * set_gearRatio[i-1], i-1);                                       
                                             max_velocity_range = RadPsecToMPsec((_2PI * mech_max_speed[i-1] / 60.0) / set_gearRatio[i-1]);
                                             min_velocity_range = RadPsecToMPsec(- (_2PI * mech_max_speed[i-1] / 60.0) / set_gearRatio[i-1]);
                                         }
@@ -797,6 +790,22 @@ void ethercat_run(char *ifname, char *mode)
                                         }
                                     }
                                 }
+                                else if(strcmp(mode,"task")==0)
+                                {
+                                    if(time_for_controller >= 0.5) //wait 0.5sec before start
+                                    {
+                                        TaskControl.read(time_for_controller, positionElmo, velocityElmo, torqueElmo);
+                                        TaskControl.compute();
+                                        TaskControl.write(torqueDesired);
+                                    }
+                                    else
+                                    {
+                                        for (int i = 1; i <= ec_slavecount; i++) //initialize
+                                        {
+                                            torqueDesired[i] = 0.0;
+                                        }
+                                    }
+                                }
                                 else
                                 {
                                     
@@ -814,17 +823,18 @@ void ethercat_run(char *ifname, char *mode)
                                         { 
                                             //positionDesired_rad = ;                                      
                                             velocityDesired_radPsec = mPsecToRadPsec(velocityDesired[i-1]);
-                                            //torqueDesired_N = ;
+                                            torqueDesired_Nm = NToNm(torqueDesired[i-1], i-1);
                                         }
                                         else
                                         {
                                             velocityDesired_radPsec = velocityDesired[i-1];
+                                            torqueDesired_Nm = torqueDesired[i-1];
                                         }
 
                                         //positionDesired_cnt = ;
                                         velocityDesired_cntPsec[i-1] = RadPsecToCntPsec(velocityDesired_radPsec, i-1);
-                                        //torqueDesired_current = ;
-                                        //torqueDesired_percentage = ;
+                                        torqueDesired_current = NmToAmp(torqueDesired_Nm, i-1);
+                                        torqueDesired_percentage[i-1] = torqueDesired_current*1000.0*1000.0/set_continuosCurrent[i-1];//torqueElmo_percentage/1000.0 * set_continuosCurrent[i-1]/1000.0;
                                         
 
                                         ////////////////////////////////////////////////////////
@@ -834,7 +844,7 @@ void ethercat_run(char *ifname, char *mode)
                                         if(control_mode == 0)
                                         {
                                             //target torque (when mode of operation is CyclicSynchronousTorquemode)
-                                            txPDO[i-1]->targetTorque = (int16) (0);
+                                            txPDO[i-1]->targetTorque = torqueDesired_percentage[i-1];
                                         }
                                         else if(control_mode == 1)
                                         {
@@ -875,7 +885,7 @@ void ethercat_run(char *ifname, char *mode)
                                             }                                     
                                         }
                                     }
-                                }                               
+                                }
   
                                 log_mem[log_cnt][0] = time_for_controller;
                                 for(int i=0; i<ELMO_NUM; i++)

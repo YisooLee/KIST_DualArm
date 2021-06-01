@@ -7,18 +7,6 @@
 #include <eigen3/Eigen/Dense>
 #include "custommath.h"
 
-#define CustomQPArraySize 30
-
-namespace Eigen
-{
-		typedef Matrix<double, -1, -1, 0, CustomQPArraySize, CustomQPArraySize> MatrixCXd;
-		typedef Matrix<double, -1, -1, 0, CustomQPArraySize, 1> VectorCXd;
-        typedef Matrix<int, -1, -1, 0, CustomQPArraySize, CustomQPArraySize> MatrixCXi;
-		typedef Matrix<int, -1, -1, 0, CustomQPArraySize, 1> VectorCXi;
-        typedef Matrix<bool, -1, -1, 0, CustomQPArraySize, CustomQPArraySize> MatrixCXb;
-		typedef Matrix<bool, -1, -1, 0, CustomQPArraySize, 1> VectorCXb;
-}
-
 using namespace std;
 using namespace Eigen;
 
