@@ -5,6 +5,11 @@
 
 <robot name="dualarm">
 
+<mujoco>
+        <compiler meshdir="meshes"                  balanceinertia="true"                  strippath="false"/>
+        <option collision="predefined" cone="elliptic" jacobian="sparse" tolerance="1e-6" iterations="30" solver="CG" timestep="0.002"/>
+</mujoco>
+
   <link
     name="base_link">
     <inertial>

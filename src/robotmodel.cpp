@@ -1,7 +1,6 @@
 #include "robotmodel.h"
 #define JDOF 15
 
-
 CModel::CModel()
 {
 	Initialize();
@@ -37,6 +36,9 @@ void CModel::Initialize()
 	_g.setZero(_k);
 	_b.setZero(_k);
 	_bg.setZero(_k);
+	_Axd.setZero(_k,_k);
+	_gxd.setZero(_k);
+	_bgxd.setZero(_k);
 
 	_J_tmp.setZero(6, _k);
 	_J_left_hand.setZero(6,_k);
@@ -60,7 +62,7 @@ void CModel::Initialize()
 
 void CModel::load_model()
 {
-	//read urdf model
+	//read urdf model		
 	RigidBodyDynamics::Addons::URDFReadFromFile("/opt/etherlab_xenomai/SOEM/test/linux/DualArm_EtherCAT/model/dualarm.urdf", &_model, false, true);		
 
 	//body id 1: body_link (trunk)
@@ -81,7 +83,7 @@ void CModel::load_model()
 	cout << "Model Loading Complete." << endl << endl;
 }
 
-void CModel::update_kinematics(VectorXd & q, VectorXd & qdot)
+void CModel::update_kinematics(VectorCXd & q, VectorCXd & qdot)
 {
 	_q = q;
 	_qdot = qdot;
@@ -101,10 +103,14 @@ void CModel::update_dynamics()
 {
 	if (_bool_kinematics_update == true)
 	{
-		RigidBodyDynamics::CompositeRigidBodyAlgorithm(_model, _q, _A, false); //update dynamics
-		RigidBodyDynamics::InverseDynamics(_model, _q, _zero_vec_joint, _zero_vec_joint, _g, NULL); //get _g
-		RigidBodyDynamics::InverseDynamics(_model, _q, _qdot, _zero_vec_joint, _bg, NULL); //get _g+_b
-		_b = _bg - _g; //get _b
+		RigidBodyDynamics::CompositeRigidBodyAlgorithm(_model, _q, _Axd, false); //update dynamics
+		RigidBodyDynamics::InverseDynamics(_model, _q, _zero_vec_joint, _zero_vec_joint, _gxd, NULL); //get _g
+		RigidBodyDynamics::InverseDynamics(_model, _q, _qdot, _zero_vec_joint, _bgxd, NULL); //get _g+_b
+		_A = _Axd;
+		_bg = _bgxd;
+		_g = _gxd;
+		_b = _bg - _g; //get _bg
+		
 	}
 	else
 	{
@@ -122,17 +128,16 @@ void CModel::calculate_EE_Jacobians()
 		RigidBodyDynamics::CalcPointJacobian6D(_model, _q, _id_left_hand, _position_local_task_left_hand, _J_tmp, false); //left hand
 		_J_left_hand.block<3, 15>(0, 0) = _global_rotate *_J_tmp.block<3, 15>(3, 0);
 		_J_left_hand.block<3, 15>(3, 0) = _global_rotate *_J_tmp.block<3, 15>(0, 0);
-		_J_left_hand_pos = _global_rotate * _J_tmp.block<3, 15>(3, 0);
-		_J_left_hand_ori = _global_rotate * _J_tmp.block<3, 15>(0, 0);
-
+		_J_left_hand_pos.noalias() = _global_rotate * _J_tmp.block<3, 15>(3, 0);
+		_J_left_hand_ori.noalias() = _global_rotate * _J_tmp.block<3, 15>(0, 0);
 
 		_J_right_hand.setZero();
 		_J_tmp.setZero();
 		RigidBodyDynamics::CalcPointJacobian6D(_model, _q, _id_right_hand, _position_local_task_right_hand, _J_tmp, false); //right hand		
 		_J_right_hand.block<3, 15>(0, 0) = _global_rotate * _J_tmp.block<3, 15>(3, 0);
 		_J_right_hand.block<3, 15>(3, 0) = _global_rotate * _J_tmp.block<3, 15>(0, 0);
-		_J_right_hand_pos = _global_rotate * _J_tmp.block<3, 15>(3, 0);
-		_J_right_hand_ori = _global_rotate * _J_tmp.block<3, 15>(0, 0);
+		_J_right_hand_pos.noalias() = _global_rotate * _J_tmp.block<3, 15>(3, 0);
+		_J_right_hand_ori.noalias() = _global_rotate * _J_tmp.block<3, 15>(0, 0);
 
 		_bool_Jacobian_update = true;
 	}
@@ -147,12 +152,12 @@ void CModel::calculate_EE_positions_orientations()
 	if (_bool_kinematics_update == true)
 	{
 		_x_left_hand.setZero();
-		_x_left_hand = _global_rotate * RigidBodyDynamics::CalcBodyToBaseCoordinates(_model, _q, _id_left_hand, _position_local_task_left_hand, false);
+		_x_left_hand.noalias() = _global_rotate * RigidBodyDynamics::CalcBodyToBaseCoordinates(_model, _q, _id_left_hand, _position_local_task_left_hand, false);
 		_x_right_hand.setZero();
-		_x_right_hand = _global_rotate * RigidBodyDynamics::CalcBodyToBaseCoordinates(_model, _q, _id_right_hand, _position_local_task_right_hand, false);
+		_x_right_hand.noalias() = _global_rotate * RigidBodyDynamics::CalcBodyToBaseCoordinates(_model, _q, _id_right_hand, _position_local_task_right_hand, false);
 
-		_R_left_hand = _global_rotate*(RigidBodyDynamics::CalcBodyWorldOrientation(_model, _q, _id_left_hand, false).transpose());
-		_R_right_hand = _global_rotate*(RigidBodyDynamics::CalcBodyWorldOrientation(_model, _q, _id_right_hand, false).transpose());
+		_R_left_hand.noalias() = _global_rotate*(RigidBodyDynamics::CalcBodyWorldOrientation(_model, _q, _id_left_hand, false).transpose());
+		_R_right_hand.noalias() = _global_rotate*(RigidBodyDynamics::CalcBodyWorldOrientation(_model, _q, _id_right_hand, false).transpose());
 	}
 	else
 	{
@@ -164,14 +169,16 @@ void CModel::calculate_EE_velocity()
 {
 	if (_bool_Jacobian_update == true)
 	{
-		_xdot_left_hand = _J_left_hand * _qdot;
-		_xdot_right_hand = _J_right_hand * _qdot;
+		_xdot_left_hand.noalias() = _J_left_hand * _qdot;
+		_xdot_right_hand.noalias() = _J_right_hand * _qdot;
 	}
 	else
 	{
 		cout << "Jacobian matrices are not ready. Please calculate Jacobians first." << endl << endl;
 	}
 }
+
+
 void CModel::set_robot_config()
 {
 

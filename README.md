@@ -16,6 +16,7 @@ cd build
 cmake -D CMAKE_BUILD_TYPE=Release -DRBDL_BUILD_ADDON_URDFREADER=ON ..
 make all
 make install
+sudo ldconfig
 ```
 
 #### qpOASES

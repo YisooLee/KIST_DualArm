@@ -68,8 +68,6 @@ int control_mode = 0;
 bool ecat_number_ok = false;
 bool ecat_WKC_ok = false;
 bool de_shutdown = false;
-
-
 	
 USHORT	elmoState[ELMO_NUM];
 char	modeState[ELMO_NUM];
@@ -80,7 +78,7 @@ double  oneRevolute_CNT[ELMO_NUM];	// encoder count * gear ratio
 double  Amp2Torq[ELMO_NUM];			// [Amp]	-> [Torque]
 double  Torq2Amp[ELMO_NUM];		// [mAmp]	<- [Torque]	
 const double set_lead = 0.005; // [m/rev]
-const double set_efficiency_lead = 0.8; // need to find
+const double set_efficiency_lead = 1.0; // need to find
 const int    set_direction[ELMO_NUM]		= {		 1,      1,       1,      1,       1,      1,       1,       1,       1,       1,       1,       1,       1,       1,       1 };	// direction CW or CCW
 const int    set_joint_type[ELMO_NUM]       = {     0,       0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      1}; //joint type, 0: revolute. 1: prismatic
 const double    max_position_limit[ELMO_NUM] = {  90.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  120.0*DEG2RAD,  90.0*DEG2RAD,  45.0*DEG2RAD,  60.0*DEG2RAD,  90.0*DEG2RAD,  15.0*DEG2RAD,  90.0*DEG2RAD,  30.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  60.0*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)
@@ -179,6 +177,7 @@ double max_position_range = 0.0;
 double min_position_range = 0.0;
 
 double time_for_controller = 0.0;
+double time_period_sec = PERIOD_NS/SEC_IN_NSEC;
 
 double positionOffset_rad[ELMO_NUM];
 double positionHome_rad[ELMO_NUM];
@@ -202,7 +201,7 @@ bool bool_ethecat_loop = true;
 int joint_num = ELMO_NUM;
 CHoming HomingControl(joint_num, set_joint_type);
 CMoveHome MoveHomeControl(joint_num, touch_probe_position_rad);
-CTaskController TaskControl(joint_num);
+CTaskController TaskControl(joint_num, time_period_sec, touch_probe_position_rad);
 
 const int HOMING_START_BIT = 4;
 const int FAULT_BIT = 3;
@@ -314,8 +313,6 @@ void log_statefile() // text file open & write.
     cout << "--------- Logging Complete ---------"<<endl<<endl;
 }
 
-
-
 void signal_callback_handler(int signum) {
    cout << endl << "Caught Ctrl+C " << signum << endl;
    
@@ -327,8 +324,6 @@ void signal_callback_handler(int signum) {
      // Terminate program
    exit(signum);
 }
-
-
 
 void ethercat_run(char *ifname, char *mode)
 {    
@@ -393,9 +388,11 @@ void ethercat_run(char *ifname, char *mode)
                 }
 
                 fin >> positionOffset_rad[i];                                
-                cout << positionOffset_rad[i] << " ";
+                cout << positionOffset_rad[i] << " ";                
             }
             cout <<endl;            
+
+            TaskControl.get_joint_position_offset(positionOffset_rad);
         }
     }
 
