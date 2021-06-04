@@ -5,6 +5,7 @@
 #include <iostream>
 #include <eigen3/Eigen/Dense>
 #include "custommath.h"
+#include "robotmodel.h"
 
 using namespace std;
 using namespace Eigen;
@@ -28,6 +29,8 @@ class CTaskController
     double _time;
     VectorCXd _q, _qdot, _torque; //state
     VectorCXd _q_des, _qdot_des, _torque_des; //reference
+    
+    CModel Model; //robot model
 };
 
 #endif

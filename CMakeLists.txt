@@ -12,13 +12,17 @@ install(TARGETS main DESTINATION bin)
 
 include_directories(
 include
+/rbdl-orb/include
+/rbdl-orb
 )
 
 add_library(dualarm_lib
   src/get_home.cpp
   src/task_controller.cpp
+  src/robotmodel.cpp
 )
 
 target_link_libraries(main soem
 dualarm_lib
+-lrbdl
 )
