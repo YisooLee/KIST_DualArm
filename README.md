@@ -1,15 +1,16 @@
 
 ## Prerequisities
 > This project was developed in Ubuntu 18.04.
-> Realtime controller is developed on Xenomai, Linux.
+> Realtime controller is developed on Xenomai 3.0.9, Linux 4.14.134.
 
 ## Requirements
 
 #### Eigen3
 
-#### RBDL
+#### RBDL 2.6.0
+> RBDL 3.0 (ORB ver is not working for this project.)
 ```sh
-git clone --recursive https://github.com/ORB-HD/rbdl-orb
+git clone https://github.com/rbdl/rbdl
 cd rbdl-orb
 mkdir build
 cd build

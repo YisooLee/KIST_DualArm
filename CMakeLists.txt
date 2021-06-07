@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.0.2)
 project(SOEM
     DESCRIPTION "Simple Open EtherCAT Master"
     VERSION 1.4.0
@@ -12,8 +13,6 @@ install(TARGETS main DESTINATION bin)
 
 include_directories(
 include
-/rbdl-orb/include
-/rbdl-orb
 )
 
 add_library(dualarm_lib
@@ -25,4 +24,5 @@ add_library(dualarm_lib
 target_link_libraries(main soem
 dualarm_lib
 -lrbdl
+-lrbdl_urdfreader
 )

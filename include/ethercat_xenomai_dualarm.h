@@ -78,7 +78,7 @@ double  oneRevolute_CNT[ELMO_NUM];	// encoder count * gear ratio
 double  Amp2Torq[ELMO_NUM];			// [Amp]	-> [Torque]
 double  Torq2Amp[ELMO_NUM];		// [mAmp]	<- [Torque]	
 const double set_lead = 0.005; // [m/rev]
-const double set_efficiency_lead = 1.0; // need to find
+const double set_efficiency_lead = 0.57; // need to find
 const int    set_direction[ELMO_NUM]		= {		 1,      1,       1,      1,       1,      1,       1,       1,       1,       1,       1,       1,       1,       1,       1 };	// direction CW or CCW
 const int    set_joint_type[ELMO_NUM]       = {     0,       0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      1}; //joint type, 0: revolute. 1: prismatic
 const double    max_position_limit[ELMO_NUM] = {  90.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  120.0*DEG2RAD,  90.0*DEG2RAD,  45.0*DEG2RAD,  60.0*DEG2RAD,  90.0*DEG2RAD,  15.0*DEG2RAD,  90.0*DEG2RAD,  30.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  60.0*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)

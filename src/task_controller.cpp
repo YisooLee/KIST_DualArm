@@ -50,7 +50,7 @@ void CTaskController::read(double time, double joint_position[], double joint_ve
 }
 
 void CTaskController::model_update()
-{	
+{
     Model.update_kinematics(_q, _qdot);
 	Model.update_dynamics();
 	Model.calculate_EE_Jacobians();
@@ -101,12 +101,26 @@ void CTaskController::compute()
     //_torque_des(1) = -10.0;
     //_torque_des(8) = 10.0;
 
-    //cout << _q.transpose() <<endl;
-    cout << Model._bg.transpose() <<endl;
-    cout <<"q " << _q.transpose() <<endl;
-    cout <<"qdot " << _qdot.transpose() <<endl;
-    cout <<"lh " << Model._x_left_hand.transpose() <<endl;
-    cout <<"rh " << Model._x_right_hand.transpose() <<endl;
+    _torque_des = Model._bg;
+//     _torque_des(1) = Model._bg(1);
+//     _torque_des(2) = Model._bg(2);
+//     _torque_des(3) = Model._bg(3);
+//     _torque_des(4) = Model._bg(4);
+//     _torque_des(5) = Model._bg(5);
+//     _torque_des(6) = Model._bg(6);
+//     _torque_des(7) = Model._bg(7);
+//     _torque_des(8) = Model._bg(8);
+//     _torque_des(9) = Model._bg(9);
+//     _torque_des(10) = Model._bg(10);
+//     _torque_des(11) = Model._bg(11);
+//     _torque_des(12) = Model._bg(12);
+//     _torque_des(13) = Model._bg(13);
+//     _torque_des(14) = Model._bg(14);
+    
+    
+    //cout << Model._bg.transpose() <<endl;    
+    //cout <<"lh " << Model._x_left_hand.transpose() <<endl;
+    //cout <<"rh " << Model._x_right_hand.transpose() <<endl;
 }
 
 

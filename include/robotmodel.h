@@ -5,7 +5,7 @@
 #include <iostream>
 #include <eigen3/Eigen/Dense>
 #include <rbdl/rbdl.h>
-#include <addons/urdfreader/urdfreader.h>
+#include <rbdl/addons/urdfreader/urdfreader.h>
 #include "custommath.h"
 
 using namespace std;
