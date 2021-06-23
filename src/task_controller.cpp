@@ -101,7 +101,8 @@ void CTaskController::compute()
     //_torque_des(1) = -10.0;
     //_torque_des(8) = 10.0;
 
-    _torque_des = Model._bg;
+    _torque_des = Model._bg;    
+//    _torque_des(0) = Model._bg(0);
 //     _torque_des(1) = Model._bg(1);
 //     _torque_des(2) = Model._bg(2);
 //     _torque_des(3) = Model._bg(3);

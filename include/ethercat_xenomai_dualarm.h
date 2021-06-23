@@ -78,7 +78,7 @@ double  oneRevolute_CNT[ELMO_NUM];	// encoder count * gear ratio
 double  Amp2Torq[ELMO_NUM];			// [Amp]	-> [Torque]
 double  Torq2Amp[ELMO_NUM];		// [mAmp]	<- [Torque]	
 const double set_lead = 0.005; // [m/rev]
-const double set_efficiency_lead = 0.57; // need to find
+const double set_efficiency_lead = 2.4; //0.597
 const int    set_direction[ELMO_NUM]		= {		 1,      1,       1,      1,       1,      1,       1,       1,       1,       1,       1,       1,       1,       1,       1 };	// direction CW or CCW
 const int    set_joint_type[ELMO_NUM]       = {     0,       0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      1}; //joint type, 0: revolute. 1: prismatic
 const double    max_position_limit[ELMO_NUM] = {  90.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  120.0*DEG2RAD,  90.0*DEG2RAD,  45.0*DEG2RAD,  60.0*DEG2RAD,  90.0*DEG2RAD,  15.0*DEG2RAD,  90.0*DEG2RAD,  30.0*DEG2RAD,  90.0*DEG2RAD,  90.0*DEG2RAD,  60.0*DEG2RAD, 0.35}; //  maximum limit degree (rad, last is m)
@@ -99,7 +99,7 @@ double	AmpToNm(double ampare, USHORT ielmo)	{return (ampare * Amp2Torq[ielmo]);}
 double	NmToAmp(double torque, USHORT ielmo)	{return (torque * Torq2Amp[ielmo]);}
 //double  TorqToNewton(double torque, USHORT ielmo) {return (_2PI * 0.8 *(torque - ((9.81*0.5*25.62*0.008*set_gearRatio[ielmo])/_2PI*0.8)))/(0.008*set_gearRatio[ielmo]);} // [Torque] -> [Force]
 double  NmToN(double torque, USHORT ielmo)      {return (_2PI * set_efficiency_lead *torque /(set_lead*set_gearRatio[ielmo]));} // [Torque] -> [Force]
-double  NToNm(double force, USHORT ielmo)       {return ((force*set_lead*set_gearRatio[ielmo])/(_2PI * set_efficiency_lead));} // [Torque] -> [Force]
+double  NToNm(double force, USHORT ielmo)       {return ((force*set_lead*set_gearRatio[ielmo])/(_2PI * set_efficiency_lead));} // [Force] -> [Torque]
 double  CntPSecToRadPsec(double CntPsec, USHORT ielmo) {return (double)CntPsec * _2PI / oneRevolute_CNT[ielmo];} // [Cnt/s] -> [Rad/s]
 double  RadPsecToMPsec(double RadPsec)          {return (double)RadPsec / _2PI * set_lead;} // [Rad/s] -> [m/s]
 double  mPsecToRadPsec(double mPsec)            {return (double)_2PI*mPsec/set_lead;} // [m/s] -> [Rad/s]
@@ -735,7 +735,7 @@ void ethercat_run(char *ifname, char *mode)
 
                                 if(strcmp(mode,"home")==0)
                                 {
-                                    if(time_for_controller >= 0.5) //wait 0.5sec before start
+                                    if(time_for_controller >= 5.0) //wait 5.0sec before start
                                     {
                                         HomingControl.read(time_for_controller, positionElmo, touchState);
                                         //HomingControl.read(time_for_controller, positionElmo_rad, velocityElmo_radPsec, torqueElmo_Nm, touchState);
@@ -746,7 +746,7 @@ void ethercat_run(char *ifname, char *mode)
                                     {
                                         for (int i = 1; i <= ec_slavecount; i++) //initialize
                                         {
-                                            velocityDesired[i] = 0.0;
+                                            velocityDesired[i-1] = 0.0;
                                         }
                                     }
                                 }
@@ -764,7 +764,7 @@ void ethercat_run(char *ifname, char *mode)
                                 }
                                 else if(strcmp(mode,"checkhome")==0 || strcmp(mode,"movehome")==0)
                                 {
-                                    if(time_for_controller >= 0.5) //wait 0.5sec before start
+                                    if(time_for_controller >= 5.0) //wait 5.0sec before start
                                     {
                                         MoveHomeControl.read(time_for_controller, positionElmo, positionOffset_rad, touchState);
 
@@ -783,13 +783,13 @@ void ethercat_run(char *ifname, char *mode)
                                     {
                                         for (int i = 1; i <= ec_slavecount; i++) //initialize
                                         {
-                                            velocityDesired[i] = 0.0;
+                                            velocityDesired[i-1] = 0.0;
                                         }
                                     }
                                 }
                                 else if(strcmp(mode,"task")==0)
                                 {
-                                    if(time_for_controller >= 0.5) //wait 0.5sec before start
+                                    if(time_for_controller >= 1.0) //wait 1sec before start
                                     {
                                         TaskControl.read(time_for_controller, positionElmo, velocityElmo, torqueElmo);
                                         TaskControl.compute();
@@ -799,7 +799,7 @@ void ethercat_run(char *ifname, char *mode)
                                     {
                                         for (int i = 1; i <= ec_slavecount; i++) //initialize
                                         {
-                                            torqueDesired[i] = 0.0;
+                                            torqueDesired[i-1] = 0.0;
                                         }
                                     }
                                 }
@@ -820,7 +820,7 @@ void ethercat_run(char *ifname, char *mode)
                                         { 
                                             //positionDesired_rad = ;                                      
                                             velocityDesired_radPsec = mPsecToRadPsec(velocityDesired[i-1]);
-                                            torqueDesired_Nm = NToNm(torqueDesired[i-1], i-1);
+                                            torqueDesired_Nm = NToNm(torqueDesired[i-1], i-1);                                            
                                         }
                                         else
                                         {
@@ -829,9 +829,10 @@ void ethercat_run(char *ifname, char *mode)
                                         }
 
                                         //positionDesired_cnt = ;
-                                        velocityDesired_cntPsec[i-1] = RadPsecToCntPsec(velocityDesired_radPsec, i-1);
-                                        torqueDesired_current = NmToAmp(torqueDesired_Nm, i-1);
-                                        torqueDesired_percentage[i-1] = torqueDesired_current*1000.0*1000.0/set_continuosCurrent[i-1];//torqueElmo_percentage/1000.0 * set_continuosCurrent[i-1]/1000.0;
+                                        
+                                        velocityDesired_cntPsec[i-1] = (int32_t) (RadPsecToCntPsec(velocityDesired_radPsec, i-1));                                        
+                                        torqueDesired_current = NmToAmp(torqueDesired_Nm, i-1);                                        
+                                        torqueDesired_percentage[i-1] = (int16_t) (torqueDesired_current*1000.0*1000.0/set_continuosCurrent[i-1]);//torqueElmo_percentage/1000.0 * set_continuosCurrent[i-1]/1000.0;
                                         
 
                                         ////////////////////////////////////////////////////////
@@ -841,7 +842,7 @@ void ethercat_run(char *ifname, char *mode)
                                         if(control_mode == 0)
                                         {
                                             //target torque (when mode of operation is CyclicSynchronousTorquemode)
-                                            txPDO[i-1]->targetTorque = torqueDesired_percentage[i-1];
+                                            txPDO[i-1]->targetTorque = (int16_t) torqueDesired_percentage[i-1];
                                         }
                                         else if(control_mode == 1)
                                         {
@@ -854,10 +855,6 @@ void ethercat_run(char *ifname, char *mode)
                                             //target position (when mode of operation is CyclicSynchronousVelocitymode)
                                             txPDO[i-1]->targetPosition = (int32_t) positionDesired_cnt[i-1];
                                         }                                        
-
-                                        //txPDO[i-1]->targetTorque = (int16_t) (0); //temporary                                                                                                                                 
-                                        //txPDO[i-1]->targetVelocity = (int32_t) (0); //temporary
-
 
                                         txPDO[i - 1]->maxTorque = (uint16)MAX_TORQUE;
                                         
@@ -890,7 +887,7 @@ void ethercat_run(char *ifname, char *mode)
                                     log_mem[log_cnt][1+i] = positionElmo[i];
                                     log_mem[log_cnt][1+15+i] = velocityElmo[i];
                                     log_mem[log_cnt][1+30+i] = torqueElmo[i];
-                                    log_mem[log_cnt][1+45+i] = touchState[i];
+                                    log_mem[log_cnt][1+45+i] = touchState[i];                                    
                                 }
 
                                 log_cnt = log_cnt + 1;
